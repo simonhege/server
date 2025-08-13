@@ -19,7 +19,8 @@ type Server struct {
 	handler http.Handler
 }
 
-func New(r rate.Limit, b int) *Server {
+// New creates a new Server instance with the provided rate limit and buffer size.
+func New(r rate.Limit, b int, corsAllowCredentials bool) *Server {
 	serveMux := http.NewServeMux()
 	s := &Server{
 		mux:     serveMux,
@@ -27,19 +28,26 @@ func New(r rate.Limit, b int) *Server {
 	}
 
 	// Default middlewares
-	s.enableCors()
+	s.enableCors(corsAllowCredentials)
 	s.handler = apply(s.handler, RateLimiter(r, b), RequestID, RequestLogger)
 
 	return s
 }
 
-func (s *Server) enableCors() {
+func (s *Server) enableCors(allowCredentials bool) {
 	s.mux.HandleFunc("OPTIONS /", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 	next := s.handler
 	s.handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		allowedOrigins := "*"
+		if origin := r.Header.Get("Origin"); origin != "" {
+			allowedOrigins = origin
+		}
+		if allowCredentials {
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
+		w.Header().Set("Access-Control-Allow-Origin", allowedOrigins)
 		w.Header().Set("Access-Control-Allow-Headers", "*")
 		w.Header().Set("Access-Control-Max-Age", "86400")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
