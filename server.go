@@ -50,7 +50,7 @@ func (s *Server) enableCors(allowCredentials bool) {
 		w.Header().Set("Access-Control-Allow-Origin", allowedOrigins)
 		w.Header().Set("Access-Control-Allow-Headers", "*")
 		w.Header().Set("Access-Control-Max-Age", "86400")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, PATCH, DELETE, OPTIONS")
 		next.ServeHTTP(w, r)
 	})
 }
