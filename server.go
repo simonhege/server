@@ -10,8 +10,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	"golang.org/x/time/rate"
 )
 
 type Server struct {
@@ -20,7 +18,7 @@ type Server struct {
 }
 
 // New creates a new Server instance with the provided rate limit and buffer size.
-func New(r rate.Limit, b int, corsAllowCredentials bool) *Server {
+func New(corsAllowCredentials bool, middlewares ...Middleware) *Server {
 	serveMux := http.NewServeMux()
 	s := &Server{
 		mux:     serveMux,
@@ -29,7 +27,7 @@ func New(r rate.Limit, b int, corsAllowCredentials bool) *Server {
 
 	// Default middlewares
 	s.enableCors(corsAllowCredentials)
-	s.handler = apply(s.handler, RateLimiter(r, b), RequestID, RequestLogger)
+	s.handler = apply(s.handler, middlewares...)
 
 	return s
 }
@@ -56,6 +54,13 @@ func (s *Server) enableCors(allowCredentials bool) {
 }
 
 type Middleware func(http.Handler) http.Handler
+
+func DefaultMiddlewares() []Middleware {
+	return []Middleware{
+		RequestID,
+		RequestLogger,
+	}
+}
 
 func apply(handler http.Handler, mws ...Middleware) http.Handler {
 	for i := len(mws) - 1; i >= 0; i-- {
